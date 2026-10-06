@@ -103,7 +103,7 @@ footer{margin-top:2.5rem;font-size:.85rem;color:var(--muted)}
 @media print{
   .testbtn,.quiz,.savebox,.badge{display:none!important}
   body{background:#fff;color:#000;font-size:11pt}
-  .tools,.name input,details,.seg span,.mapnote{display:none!important}
+  .tools,.delfilter,.name input,details,.seg span,.mapnote{display:none!important}
   .theme,.map{break-inside:avoid;border-color:#999}
   .hide-done .goal.is-done,.hide-done .theme.complete{display:block}
   .printname{display:block!important}
@@ -144,6 +144,7 @@ table.qt th{font-weight:700}
 svg.fig{display:block;max-width:100%;height:auto;margin-top:.6rem}
 svg .db{fill:var(--d1)} svg .dg{fill:var(--done)}
 svg .sw{fill:var(--surface);stroke:var(--ink);stroke-width:1.2} svg .sg{fill:var(--done);stroke:var(--ink);stroke-width:1.2}
+svg .grid{stroke:var(--line);stroke-width:1} svg .gl2{stroke:var(--d2);stroke-width:2.5;fill:none}
 svg .ax{stroke:var(--muted);stroke-width:1.3;fill:none} svg .gl{stroke:var(--d1);stroke-width:2.5;fill:none}
 svg .hb{fill:var(--done-soft);stroke:var(--done);stroke-width:1.5}
 svg .lab{font-size:11px;fill:var(--muted);font-family:inherit}
@@ -160,6 +161,17 @@ figure.mini figcaption{font-size:.85rem;font-weight:700;text-align:center}
 .savemsg{font-weight:700;font-size:.92rem}
 @media (max-width:560px){.quiz{margin-left:1rem;margin-right:1rem}.testbtn{margin-right:.75rem}}
 
+.dtag{display:inline-block;margin-left:.45rem;font-size:.72rem;font-weight:700;padding:0 .45rem;border-radius:999px;border:1.5px solid var(--line);color:var(--muted);vertical-align:2px;white-space:nowrap}
+.dtag.d1{border-color:var(--d1);color:var(--d1)} .dtag.d2{border-color:var(--d2);color:var(--d2)}
+.delfilter{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}
+.delfilter button{font:inherit;font-size:.9rem;padding:.4rem .85rem;border:0;background:transparent;color:var(--ink);cursor:pointer}
+.delfilter button+button{border-left:1.5px solid var(--line)}
+.delfilter button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:700}
+.goal.delhide,.theme.nogoals{display:none!important}
+.seg.narrow span{display:none}
+.qdel{margin:0 0 .7rem;font-size:.88rem;font-weight:700;padding:.35rem .7rem;border-radius:8px;border-left:3px solid var(--line);background:var(--surface)}
+.qdel.d1{border-left-color:var(--d1)} .qdel.d2{border-left-color:var(--d2)}
+.delstat{display:flex;flex-wrap:wrap;gap:.4rem .6rem;margin:.9rem 0 0;font-size:.88rem}
 .printname{display:none;font-size:1rem;margin-top:.3rem}
 </style>
 </head>
@@ -185,16 +197,18 @@ figure.mini figcaption{font-size:.85rem;font-weight:700;text-align:center}
       <p id="scoretext">av eksamensoppgavene fra 2022–2026 handler om ting du har krysset av at du kan.</p>
     </div>
     <div class="bar" id="bar" role="list"></div>
+    <div class="delstat" id="delstat"></div>
     <p class="mapnote">Hver blokk er et tema. Jo bredere blokken er, jo oftere har temaet kommet på eksamen. Blokken fylles opp når du krysser av. Trykk på en blokk for å hoppe til temaet.</p>
   </section>
 
   <div class="tools">
     <label class="toggle"><input type="checkbox" id="hide"> Vis bare det jeg mangler</label>
+    <div class="delfilter" role="group" aria-label="Vis delmål for"><button type="button" data-delf="0" aria-pressed="true">Alle</button><button type="button" data-delf="1" aria-pressed="false">Del 1</button><button type="button" data-delf="2" aria-pressed="false">Del 2</button></div>
     <span class="spacer"></span>
     <button class="btn" id="print" type="button">Skriv ut</button>
     <button class="btn" id="reset" type="button">Nullstill</button>
   </div>
-  <p style="margin:.25rem 0 0;color:var(--muted);font-size:.95rem">Kryss av når du føler deg ferdig med et delmål – altså at du kunne løst en eksamensoppgave om det alene. Usikker? Trykk «Test deg» og prøv en oppgave først.</p>
+  <p style="margin:.25rem 0 0;color:var(--muted);font-size:.95rem">Kryss av når du føler deg ferdig med et delmål – altså at du kunne løst en eksamensoppgave om det alene. Usikker? Trykk «Test deg» og prøv en oppgave først. <b>Del 1</b> er uten hjelpemidler, <b>Del 2</b> er med alle hjelpemidler.</p>
   <details class="savebox" id="savebox">
     <summary>Lagre fremgangen eller fortsett på en annen enhet</summary>
     <div class="savebody">
@@ -606,13 +620,17 @@ const THEMES = [
 "Se forskjell på lineær og eksponentiell vekst i en programkode"]}
 ]
 ;
+const DEL={prosent:[1,1,1,1,1,1,1,1,1,0,2],funk:[1,1,0,1,2,1,0,0],maale:[1,1,1,2,2,1],prop:[1,1,1,1,1,1,1],modell:[2,1,2,1,0,0],potens:[1,1,1,1,1,1,1],areal:[0,0,1,2,2,0],monster:[1,1,1,1,1],formler:[1,1,1,1,1],python:[1,2,1,1,1,1]};
+
+const DLAB = ["Del 1 og 2","Del 1","Del 2"];
+function delOf(tid, i){ return (typeof DEL !== "undefined" && DEL[tid] && DEL[tid][i] !== undefined) ? DEL[tid][i] : 0; }
 const TASKS = [{"s": "V22", "d": "Del 1", "o": 6, "h": "areal", "t": "Rektangel tre ganger så langt som bredt, areal 432 cm²: finn bredden"}, {"s": "V24", "d": "Del 1", "o": 4, "h": "formler", "t": "Bremselengdeformel B = x²/2 der x er farten delt på 10: kontroller og regn baklengs"}, {"s": "H25", "d": "Del 1", "o": 4, "h": "formler", "t": "Pyramide V = ⅓·G·h med kvadratisk grunnflate og høyde lik sidekanten: høyde og proporsjonalitet"}, {"s": "V26", "d": "Del 1", "o": 11, "h": "formler", "t": "Kostnadsfunksjon K(x) = x² + bx + 20 000: tolk K(0) og bestem b"}, {"s": "V22", "d": "Del 1", "o": 4, "h": "funk", "t": "V(x) = 4x³ − 100x² + 600x for en eske: regn ut V(5) og tolk likningen V(x) = 500"}, {"s": "H22", "d": "Del 1", "o": 3, "h": "funk", "t": "Graf til f: sett opp mulig uttrykk, og bestem f(16), f(400), f(9/4) og f(−25)"}, {"s": "H23", "d": "Del 1", "o": 4, "h": "funk", "t": "Hundeår H(x) = 6x + 12: forklar uttrykket, gyldighet, og om alderen er proporsjonal"}, {"s": "V24", "d": "Del 1", "o": 2, "h": "funk", "t": "Sparing f(x) = 20 000 · 1,0485ˣ: tolk tallene, og hva forteller programmet"}, {"s": "H24", "d": "Del 1", "o": 5, "h": "funk", "t": "Celsius og fahrenheit: bestem formel fra punkter i koordinatsystem, og 68 grader F"}, {"s": "V25", "d": "Del 1", "o": 8, "h": "funk", "t": "Bøtte med godteri, lineær modell G(x) = ax + b: bestem og tolk a og b, og pris for 8 hg"}, {"s": "H25", "d": "Del 1", "o": 5, "h": "funk", "t": "To grafer for lønn: timelønnen til Nora og Nils, og antall timer når differansen er 720 kr"}, {"s": "V26", "d": "Del 1", "o": 9, "h": "funk", "t": "Bom med årsavgift og pris per passering: finn begge, lineær modell og antall passeringer"}, {"s": "H22", "d": "Del 1", "o": 4, "h": "maale", "t": "Graf for gallon og liter: stigningstall og tolking, og 100 millioner fat per dag på standardform"}, {"s": "H23", "d": "Del 1", "o": 1, "h": "maale", "t": "30 mL væske per kg kroppsvekt, 70 kg: hvor mange liter"}, {"s": "H25", "d": "Del 1", "o": 1, "h": "maale", "t": "Buss med gjennomsnittsfart 80 km/h i 4 timer og 30 minutter: hvor lang er strekningen"}, {"s": "V26", "d": "Del 1", "o": 2, "h": "maale", "t": "Familie leser av vannmåleren: gjennomsnittlig vannforbruk per måned"}, {"s": "V26", "d": "Del 1", "o": 8, "h": "maale", "t": "Stålplate 1000 × 500 × 6 mm med tetthet 8 g/cm³: hvor mye veier den"}, {"s": "V23", "d": "Del 1", "o": 4, "h": "modell", "t": "Klaras høyde fra 4 til 10 år: lag modell, høyde ved 19 år, og vurder gyldighetsområdet"}, {"s": "V25", "d": "Del 1", "o": 6, "h": "monster", "t": "Figurer av grønne kvadrater: antall i figur 5 og formel for figur n"}, {"s": "V26", "d": "Del 1", "o": 10, "h": "monster", "t": "Tallfølgen 1, 3, 7, 13, 21: tall nummer 8 og formel for tall nummer n"}, {"s": "V22", "d": "Del 1", "o": 5, "h": "python", "t": "Les ferdig programkode: hva vil eleven finne ut"}, {"s": "H24", "d": "Del 1", "o": 4, "h": "python", "t": "To programmer for salgsutvikling: tolk linje 7 i hvert program"}, {"s": "V25", "d": "Del 1", "o": 7, "h": "python", "t": "Lars sparer 120 000 kroner: hva forteller programmet om planen hans"}, {"s": "H25", "d": "Del 1", "o": 7, "h": "python", "t": "Femkanttall: lag oversikt over hva programmet skriver ut, og forklar sammenhengen"}, {"s": "V26", "d": "Del 1", "o": 13, "h": "python", "t": "Fuglebestand på 20 000: tolk de to modellene f og g i programkoden"}, {"s": "V22", "d": "Del 1", "o": 3, "h": "prop", "t": "Gi eksempel på to proporsjonale størrelser og tegn grafen"}, {"s": "V23", "d": "Del 1", "o": 3, "h": "prop", "t": "En praktisk situasjon som er proporsjonal og en som er omvendt proporsjonal, med grafer"}, {"s": "H23", "d": "Del 1", "o": 3, "h": "prop", "t": "Ohms lov: er påstandene om strøm, spenning og motstand sanne"}, {"s": "V24", "d": "Del 1", "o": 3, "h": "prop", "t": "Fire grafer: hvilke viser proporsjonale og omvendt proporsjonale størrelser"}, {"s": "H24", "d": "Del 1", "o": 3, "h": "prop", "t": "Tre situasjoner (badstue, brustilbud, vaffelrøre): proporsjonal, omvendt proporsjonal eller ingen av delene"}, {"s": "V25", "d": "Del 1", "o": 3, "h": "prop", "t": "Beskriv en omvendt proporsjonal situasjon, tegn graf og marker tre punkter med koordinater"}, {"s": "H25", "d": "Del 1", "o": 6, "h": "prop", "t": "30-dagersbillett til 1200 kr: pris per tur i tabell og graf, sammenlignet med enkeltbillett"}, {"s": "V26", "d": "Del 1", "o": 4, "h": "prop", "t": "Fyll ut tabell slik at antall personer og pris per person blir omvendt proporsjonale"}, {"s": "V26", "d": "Del 1", "o": 12, "h": "prop", "t": "Lufttetthet L = p/(287·T): er trykk og tetthet proporsjonale, og tetthet og temperatur omvendt proporsjonale"}, {"s": "V22", "d": "Del 1", "o": 1, "h": "prosent", "t": "Renta stiger fra 2,0 % til 2,2 %: prosentpoeng og prosentvis økning"}, {"s": "V22", "d": "Del 1", "o": 2, "h": "prosent", "t": "Søylediagram over elevtall 2018–2021: når var den prosentvise økningen størst"}, {"s": "H22", "d": "Del 1", "o": 1, "h": "prosent", "t": "Eiendomsskatt 3,0 promille av ligningsverdien, endret til 3,5 promille"}, {"s": "H22", "d": "Del 1", "o": 2, "h": "prosent", "t": "Tomt på 600 m², maks 30 % bebygd: er det plass til hus og garasje"}, {"s": "V23", "d": "Del 1", "o": 1, "h": "prosent", "t": "Sjokolade til 20 kr og 50 kr: 150 % dyrere og 60 % billigere – hvorfor ulikt"}, {"s": "H23", "d": "Del 1", "o": 2, "h": "prosent", "t": "Ni av ti / 88 % bruker sosiale medier, økning på 8 prosentpoeng"}, {"s": "H23", "d": "Del 1", "o": 5, "h": "prosent", "t": "Verdifall på bil 20 % første år og 14 % andre år: sett opp regnestykke for verdien etter 2 år"}, {"s": "V24", "d": "Del 1", "o": 1, "h": "prosent", "t": "18 millioner mennesker er 2 promille av verdens befolkning: finn befolkningen"}, {"s": "H24", "d": "Del 1", "o": 1, "h": "prosent", "t": "Vare A fra 120 til 180 kr, vare B fra 16 til 26 kr: hvilken økte prosentvis mest"}, {"s": "V25", "d": "Del 1", "o": 1, "h": "prosent", "t": "Sjokolade til 40 kr i butikk og 60 kr på bensinstasjon: hvor mange prosent dyrere"}, {"s": "V25", "d": "Del 1", "o": 2, "h": "prosent", "t": "Ap 40 % og Sp 20 %, begge opp 5 prosentpoeng: størst prosentvis framgang"}, {"s": "H25", "d": "Del 1", "o": 2, "h": "prosent", "t": "Deksel til 200 kr inkludert 25 % merverdiavgift: hvor mye er avgiften"}, {"s": "V26", "d": "Del 1", "o": 1, "h": "prosent", "t": "60 sauer, og 80 % skal slaktes: hvor mange"}, {"s": "V26", "d": "Del 1", "o": 6, "h": "prosent", "t": "Pris opp 10 % og så ned 10 %: mer, mindre eller det samme"}, {"s": "V26", "d": "Del 1", "o": 7, "h": "prosent", "t": "Båt verdt 850 000 kr faller 20 % første år og 6 % de neste fem: sett opp uttrykk"}, {"s": "V23", "d": "Del 1", "o": 2, "h": "potens", "t": "8 milliarder mennesker og 2,5 millioner ganger flere maur: svar på standardform"}, {"s": "H24", "d": "Del 1", "o": 2, "h": "potens", "t": "20 billiarder maur: skriv på standardform, og vekten av alle maurene i en maurtue"}, {"s": "V25", "d": "Del 1", "o": 4, "h": "potens", "t": "Fyll inn fire tall i uttrykk med tierpotenser slik at svaret blir 8 000 000 000"}, {"s": "V25", "d": "Del 1", "o": 5, "h": "potens", "t": "Blodceller: 7·10⁹ + 5·10¹² + 3·10¹¹ til sammen"}, {"s": "H25", "d": "Del 1", "o": 3, "h": "potens", "t": "Støvpartikkel veier 0,000 000 005 g: hvor mange i 20 g støv"}, {"s": "V26", "d": "Del 1", "o": 3, "h": "potens", "t": "Regn ut et uttrykk med store tall"}, {"s": "V26", "d": "Del 1", "o": 5, "h": "potens", "t": "Sorter potenser og tierpotenser i stigende rekkefølge"}, {"s": "H22", "d": "Del 2", "o": 4, "h": "areal", "t": "Gjerde på 64 m: størst mulig areal, systematisk oversikt og funksjonsuttrykk"}, {"s": "V23", "d": "Del 2", "o": 3, "h": "areal", "t": "Speidere med 80 m tau langs en elv: størst mulig areal, oversikt og graf"}, {"s": "H23", "d": "Del 2", "o": 5, "h": "areal", "t": "Rektangel innskrevet i rettvinklet trekant: størst mulig areal (vektet 3x)"}, {"s": "H24", "d": "Del 2", "o": 8, "h": "areal", "t": "Kasse av metallplate: volum ved 100 mm hjørne, oversikt, funksjon, maks volum og gyldighet"}, {"s": "V25", "d": "Del 2", "o": 6, "h": "areal", "t": "Sylinderboks med volum 450 cm³: oversikt, funksjonsuttrykk og minst mulig overflate"}, {"s": "H25", "d": "Del 2", "o": 7, "h": "areal", "t": "Blomsterbed formet som rektangel med halvsirkel: omkrets, areal, oversikt, graf og størst areal"}, {"s": "H22", "d": "Del 2", "o": 2, "h": "formler", "t": "Bygård: 40 leiligheter og 90 rom, med to eller tre rom i hver"}, {"s": "H23", "d": "Del 2", "o": 7, "h": "formler", "t": "Ramanujans formel for omkretsen av en ellipse: regn ut og undersøk spesialtilfellet sirkel"}, {"s": "H24", "d": "Del 2", "o": 4, "h": "formler", "t": "Formel for tidsforskjell mellom to kjøreturer: regn ut, og finn tidene baklengs"}, {"s": "V22", "d": "Del 2", "o": 1, "h": "funk", "t": "Vanntank V(x): funksjonsverdi, verdimengde, halv tømming, stigningstall og endring per minutt"}, {"s": "V22", "d": "Del 2", "o": 2, "h": "funk", "t": "Bilutleie hos firma A, B og C: grafer, A(x) = 4x + 600, pris per km, og hvilket firma som lønner seg"}, {"s": "H22", "d": "Del 2", "o": 1, "h": "funk", "t": "Basseng T(x) = 3,5 + 34,5 · 0,87ˣ: startverdi, under 20 grader, stigningstall og konstantleddet"}, {"s": "V23", "d": "Del 2", "o": 1, "h": "funk", "t": "Svalbard T(x) fjerdegradsfunksjon: døgn over 0 grader, stigningstall og tolking"}, {"s": "V23", "d": "Del 2", "o": 2, "h": "funk", "t": "Aurora til postkontoret: hvilken av fire grafer beskriver turen"}, {"s": "H23", "d": "Del 2", "o": 8, "h": "funk", "t": "Fart-strekning-graf for racerbil: hvilken bane har bilen kjørt på"}, {"s": "V24", "d": "Del 2", "o": 1, "h": "funk", "t": "Bagettsalg og overskudd: vis at O(x) er en god modell, maks overskudd og stigningstall"}, {"s": "H24", "d": "Del 2", "o": 1, "h": "funk", "t": "Avisabonnement P(x) = 3600 · 0,85ˣ + 600: to metoder, stigningstall, og når digital tar over"}, {"s": "H24", "d": "Del 2", "o": 6, "h": "funk", "t": "Tre bedrifter med fast lønn og reisetillegg: årslønn og antall reiseoppdrag"}, {"s": "V25", "d": "Del 2", "o": 3, "h": "funk", "t": "Avissalg: 35 % provisjon mot fast lønn pluss 10 kr per avis – gi Elise et råd"}, {"s": "H25", "d": "Del 2", "o": 2, "h": "funk", "t": "Fire situasjoner og ni grafer: koble hver situasjon til riktig graf"}, {"s": "V26", "d": "Del 2", "o": 1, "h": "funk", "t": "CO₂-utslipp U(x) = 5400/x + 0,0074x² + 50: utslipp ved 50 km/h, minste utslipp og 20 minutter"}, {"s": "V22", "d": "Del 2", "o": 4, "h": "maale", "t": "Olje der 1 L veier 0,9124 kg: gram per 10 mL og desiliter i et beger"}, {"s": "H22", "d": "Del 2", "o": 7, "h": "maale", "t": "Tredemølle: kcal per km, Cooper-test og sjokolade – lag en oversikt for Sofie"}, {"s": "H23", "d": "Del 2", "o": 3, "h": "maale", "t": "Pølser i Norge: antall per sekund, prosent 17. mai, og lengden av en pølse via jordas omkrets"}, {"s": "H23", "d": "Del 2", "o": 4, "h": "maale", "t": "Hund har spist 200 g sjokolade: teobromin i mg per kg – bør Snorre ringe veterinæren"}, {"s": "V24", "d": "Del 2", "o": 4, "h": "maale", "t": "Jakob Ingebrigtsens rekorder: gjennomsnittlig rundetid og lengden av en engelsk mil"}, {"s": "H24", "d": "Del 2", "o": 2, "h": "maale", "t": "Medisin med 6 mg per mL, 15 mg per kg kroppsvekt, tre doser: mL per dose"}, {"s": "V25", "d": "Del 2", "o": 2, "h": "maale", "t": "Stikk UT!-artikkel: gjennomsnittlig lengde per deltaker, og hvor mange ganger rundt jorda"}, {"s": "V25", "d": "Del 2", "o": 5, "h": "maale", "t": "To typer terrassebord med pris per meter: finn pris per kvadratmeter"}, {"s": "V25", "d": "Del 2", "o": 7, "h": "maale", "t": "Kjøpe bagett i kantina eller smøre selv: gjør antakelser og finn besparelsen"}, {"s": "H25", "d": "Del 2", "o": 4, "h": "maale", "t": "Epler i USA: 3 pund for 4,18 dollar og kurs 10,16 – hva koster ett kilogram i kroner"}, {"s": "H25", "d": "Del 2", "o": 6, "h": "maale", "t": "Breddegrader og nautisk mil: avstand per breddegrad, jordas omkrets og prosentandel Oslo–Trondheim"}, {"s": "V26", "d": "Del 2", "o": 4, "h": "maale", "t": "Varme opp vann: 4184 J per liter per grad, dusj på 14 L/min, blanding, energi og strømpris"}, {"s": "V22", "d": "Del 2", "o": 5, "h": "modell", "t": "Bakterie som deler seg hvert 20. minutt: antall etter 12 timer"}, {"s": "V22", "d": "Del 2", "o": 7, "h": "modell", "t": "Temperatur i stua: modell a·xᵇ, korrigert tabell, eksponentialfunksjon og gyldighetsområde"}, {"s": "H22", "d": "Del 2", "o": 6, "h": "modell", "t": "Pendel: modell S(x) = a·xᵇ fra tabell, forenkle formelen T = 2π·√(L/g), og sammenlign"}, {"s": "V23", "d": "Del 2", "o": 6, "h": "modell", "t": "Salg av energidrikk 2015–2021: modell a·bˣ, tolk a og b, og prosentvis økning 2021–2022"}, {"s": "H23", "d": "Del 2", "o": 1, "h": "modell", "t": "Antall fiskere 1952–2022: lag modell, framskriv til 2050, gyldighet og stigningstall"}, {"s": "V24", "d": "Del 2", "o": 6, "h": "modell", "t": "Lufttrykk og kokepunkt: modell a·xᵇ, to modeller for trykk mot høyde, og hardkokte egg"}, {"s": "H24", "d": "Del 2", "o": 5, "h": "modell", "t": "Fra 290 000 til 340 000 følgere på 8 måneder: lineær og eksponentiell funksjon"}, {"s": "V25", "d": "Del 2", "o": 1, "h": "modell", "t": "Kikhostetilfeller: vis at K(x) = 27,8 · 1,2ˣ passer, tolk 1,2, stigningstall og mai 2025"}, {"s": "H25", "d": "Del 2", "o": 1, "h": "modell", "t": "Fisk, lengde og vekt: modell a·xᵇ, graf, baklengs, stigningstall og 20 % lengre fisk"}, {"s": "V26", "d": "Del 2", "o": 3, "h": "modell", "t": "Vipebestanden 2014–2022: lineær og eksponentiell modell, og en modell som stabiliserer seg"}, {"s": "V22", "d": "Del 2", "o": 6, "h": "monster", "t": "Klossefigurer: figur 5, de 10 første figurene og 10 000 klosser"}, {"s": "V22", "d": "Del 2", "o": 8, "h": "monster", "t": "Lysgardin med lyspærer: antall tråder, tabell og et 15 meter langt gardin"}, {"s": "V23", "d": "Del 2", "o": 5, "h": "monster", "t": "Non Stop-K-er: beskriv mønsteret, lag program for de 20 første, og 2000 Non Stop"}, {"s": "H23", "d": "Del 2", "o": 6, "h": "monster", "t": "Linjestykker der hvert er 90 % av det forrige: sum, program, og prosentvis økning fra 50 til 100 ledd"}, {"s": "V24", "d": "Del 2", "o": 5, "h": "monster", "t": "Tallfølgen 2, 5, 11, 23, 47: beskriv mønsteret og argumenter for at leddene er oddetall"}, {"s": "H22", "d": "Del 2", "o": 5, "h": "python", "t": "Programkode for x² − 6x + 8: hva finner Lars ut, endre uttrykket, og foreslå endringer"}, {"s": "H22", "d": "Del 2", "o": 3, "h": "prop", "t": "Fart/tid-graf, huskeregel for bremselengde og celsius-fahrenheit-formel: proporsjonalt eller ikke"}, {"s": "V23", "d": "Del 2", "o": 4, "h": "prop", "t": "Potetsekker som punkter i et koordinatsystem: tyngst, lik pris og pris per kg"}, {"s": "V22", "d": "Del 2", "o": 3, "h": "prosent", "t": "Fire ulike tilbud på dusjsåpe: sorter tilbudene etter hvor gode de er"}, {"s": "H23", "d": "Del 2", "o": 2, "h": "prosent", "t": "Lengden +10 % og bredden −20 %: prosentvis endring av arealet"}, {"s": "V24", "d": "Del 2", "o": 2, "h": "prosent", "t": "Sparekonto med 3,25 % rente: fem år fram og fem år tilbake, både ved regning og grafisk"}, {"s": "V24", "d": "Del 2", "o": 7, "h": "prosent", "t": "Ta 3 par sko, betal for 2: bruk prosentregning til å fordele betalingen"}, {"s": "H24", "d": "Del 2", "o": 3, "h": "prosent", "t": "Pris opp 10 %, opp 20 % og ned 30 %: mer, mindre eller like mye som før"}, {"s": "H24", "d": "Del 2", "o": 7, "h": "prosent", "t": "Kommunestyrevalg: hvor mange stemte ikke, og størst prosentvis framgang"}, {"s": "V25", "d": "Del 2", "o": 4, "h": "prosent", "t": "Abonnementstilbud med oppgitte rabattprosenter: hva koster avisen uten rabatt"}, {"s": "H25", "d": "Del 2", "o": 5, "h": "prosent", "t": "Aksje ned 23 %: hvor mange prosent må den opp for å være tilbake på samme verdi"}, {"s": "V26", "d": "Del 2", "o": 2, "h": "prosent", "t": "Styringsrenten ned fra 4,25 % til 4 %: prosentpoeng og prosent"}, {"s": "V24", "d": "Del 2", "o": 3, "h": "potens", "t": "Oljeproduksjon i fat: antall liter på standardform, og prosentvis økning 2022–2023"}, {"s": "H25", "d": "Del 2", "o": 3, "h": "potens", "t": "Betalingsanmerkninger (NRK-tekst): gjennomsnittlig gjeld og antall personer over 18 år"}];
 const SETT = {V22:"Våren 2022",H22:"Høsten 2022",V23:"Våren 2023",H23:"Høsten 2023",V24:"Våren 2024",H24:"Høsten 2024",V25:"Våren 2025",H25:"Høsten 2025",V26:"Våren 2026"};
 const ORDER = ["V26","H25","V25","H24","V24","H23","V23","H22","V22"];
 const KEY = "1p-avkrysning-v1";
 const TOTAL = TASKS.length;
 
-let state = { checked:{}, tested:{}, name:"", hide:false };
+let state = { checked:{}, tested:{}, name:"", hide:false, delf:0 };
 try { const s = localStorage.getItem(KEY); if (s) state = Object.assign(state, JSON.parse(s)); } catch(e) {}
 if (!state.tested) state.tested = {};
 const ALLIDS = []; THEMES.forEach(t => t.mal.forEach((_,i) => ALLIDS.push(t.id+"-"+i)));
@@ -654,7 +672,8 @@ THEMES.forEach(t => {
     </div>
     <ul class="goals">${t.mal.map((m,i) => {
       const id = t.id+"-"+i;
-      return `<li class="goal" data-id="${id}"><label><input type="checkbox" data-id="${id}"><span>Jeg kan ${esc(m.charAt(0).toLowerCase()+m.slice(1))}<span class="badge" hidden>Testet</span></span></label><button type="button" class="testbtn" data-test="${id}" aria-expanded="false">Test deg</button><div class="quiz" hidden></div></li>`;
+      const d = delOf(t.id, i);
+      return `<li class="goal" data-id="${id}" data-del="${d}"><label><input type="checkbox" data-id="${id}"><span>Jeg kan ${esc(m.charAt(0).toLowerCase()+m.slice(1))}<span class="dtag d${d}">${DLAB[d]}</span><span class="badge" hidden>Testet</span></span></label><button type="button" class="testbtn" data-test="${id}" aria-expanded="false">Test deg</button><div class="quiz" hidden></div></li>`;
     }).join("")}</ul>
     <details><summary>Se eksamensoppgavene om dette (${t.tasks.length})</summary>
       <div class="tasks"><table><tbody>${t.tasks.map(x =>
@@ -670,7 +689,7 @@ themesEl.addEventListener("change", e => {
 });
 
 function render(){
-  let cover = 0, done = 0, all = 0;
+  let cover = 0, done = 0, all = 0; const dc = [[0,0],[0,0],[0,0]];
   THEMES.forEach(t => {
     const n = t.mal.length;
     const k = t.mal.filter((_,i) => state.checked[t.id+"-"+i]).length;
@@ -683,14 +702,21 @@ function render(){
     t.sec.querySelector(".count").textContent = `${k} av ${n}`;
     t.sec.querySelector(".minibar i").style.width = (p*100)+"%";
     t.sec.classList.toggle("complete", p === 1);
+    let vis = 0;
     t.sec.querySelectorAll(".goal").forEach(li => {
-      const on = !!state.checked[li.dataset.id];
+      const on = !!state.checked[li.dataset.id], d = +li.dataset.del, dh = state.delf && d && d !== state.delf;
+      li.classList.toggle("delhide", !!dh);
+      if (!dh && !(state.hide && on)) vis++;
+      dc[d][0]++; if (on) dc[d][1]++;
       li.classList.toggle("is-done", on);
       li.querySelector("input").checked = on;
       li.querySelector(".badge").hidden = !state.tested[li.dataset.id];
     });
+    t.sec.classList.toggle("nogoals", vis === 0 && !!state.delf);
   });
   document.getElementById("pct").textContent = Math.round(cover*100) + " %";
+  document.getElementById("delstat").innerHTML = `<span class="tag d1">Del 1: ${dc[1][1]} av ${dc[1][0]}</span><span class="tag d2">Del 2: ${dc[2][1]} av ${dc[2][0]}</span><span class="tag">Begge deler: ${dc[0][1]} av ${dc[0][0]}</span>`;
+  document.querySelectorAll(".delfilter button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.delf === (state.delf||0))));
   document.getElementById("scoretext").textContent =
     `av eksamensoppgavene fra 2022–2026 handler om ting du har krysset av at du kan. Du har krysset av ${done} av ${all} delmål.`;
   const app = document.getElementById("app");
@@ -708,6 +734,7 @@ function parseNum(s){
   s = String(s).trim().replace(/[\s\u00A0]/g,"").replace(/[−–]/g,"-").replace(/(kr|%|år|km|egg|elever|besøk|min|stk)\.?$/i,"");
   if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g,"");
   s = s.replace(",",".");
+  const fm = s.match(/^(-?\d+)\/(\d+)$/); if (fm && +fm[2] !== 0) return +fm[1] / +fm[2];
   return /^-?\d*\.?\d+$/.test(s) ? parseFloat(s) : NaN;
 }
 function openQuiz(li, fresh){
@@ -717,7 +744,8 @@ function openQuiz(li, fresh){
   let body = "";
   if (q.type === "mc") body = `<div class="opts">${q.opts.map((o,i) => `<button type="button" class="opt" data-i="${i}">${o}</button>`).join("")}</div>`;
   else body = `<div class="ansrow"><input type="text" ${q.type==="num"?'inputmode="decimal"':'class="wide"'} aria-label="Svaret ditt" placeholder="${q.type==="list"?"For eksempel: 3 5 7 8 12":"Svaret ditt"}">${q.unit?`<span>${q.unit}</span>`:""}<button type="button" class="btn primary chk">Sjekk svaret</button></div>`;
-  box.innerHTML = `<div class="qtext">${q.q}</div>${body}<p class="fb" aria-live="polite"></p>
+  const dd = delOf(tid, idx), DTXT = ["Kan komme på både Del 1 og Del 2. Prøv gjerne uten hjelpemidler først.","Del 1 – uten hjelpemidler. Bruk bare blyant og papir.","Del 2 – alle hjelpemidler: GeoGebra, Python, kalkulator og regneark."];
+  box.innerHTML = `<p class="qdel d${dd}">${DTXT[dd]}</p><div class="qtext">${q.q}</div>${body}<p class="fb" aria-live="polite"></p>
     <div class="qactions"><button type="button" class="btn rev">Vis løsning</button><button type="button" class="btn nxt">Ny oppgave</button><button type="button" class="btn cls">Lukk</button></div>
     <div class="sol" hidden>${q.sol}</div>`;
   box.hidden = false;
@@ -800,11 +828,15 @@ const navn = document.getElementById("navn");
 navn.value = state.name || "";
 navn.addEventListener("input", () => { state.name = navn.value; save(); render(); });
 document.getElementById("hide").addEventListener("change", e => { state.hide = e.target.checked; save(); render(); });
+function fitLabels(){ THEMES.forEach(x => x.seg.classList.toggle("narrow", x.seg.offsetWidth < 44)); }
+window.addEventListener("resize", fitLabels);
+document.querySelectorAll(".delfilter button").forEach(b => b.addEventListener("click", () => { state.delf = +b.dataset.delf; save(); render(); }));
 document.getElementById("print").addEventListener("click", () => window.print());
 document.getElementById("reset").addEventListener("click", () => {
   if (confirm("Vil du fjerne alle avkrysningene? Dette kan ikke angres.")) { state.checked = {}; state.tested = {}; save(); render(); }
 });
 render();
+fitLabels();
 </script>
 </body>
 </html>
